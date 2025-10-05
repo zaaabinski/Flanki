@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
-public class ThrowPowerScript : MonoBehaviour
+public class PingPongThrowSlider : MonoBehaviour
 {
     private Slider slider;
     public bool moveSlider;
