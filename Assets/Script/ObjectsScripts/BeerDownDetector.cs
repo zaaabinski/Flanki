@@ -7,8 +7,9 @@ public class BeerDownDetector : MonoBehaviour
     {
         if (other.gameObject.CompareTag("Ground"))
         {
-            GameManager.instance.isCanDown = true;
-            GameManager.instance.TurnOnDrinkText();   
+            /*GameManager.instance.isCanDown = true;
+            GameManager.instance.TurnOnDrinkText();   */
+            Debug.Log("Beer down");
         }
     }
 }
