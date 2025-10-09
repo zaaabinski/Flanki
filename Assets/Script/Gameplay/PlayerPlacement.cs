@@ -69,9 +69,7 @@ public class PlayerPlacement : NetworkBehaviour
                 }
             }
         }
-        GameplayScript.instance.TurnChanged();
+        GameplayScript.instance.EndPlayerTurn();
         teamsBalanced = true;
     }
-
-
 }
