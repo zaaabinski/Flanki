@@ -2,53 +2,38 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class NetworkPlayerManager : NetworkBehaviour
 {
     public static NetworkPlayerManager Instance { get; private set; }
 
-    // Actual player registry (runtime use)
     public Dictionary<ulong, GameObject> ConnectedPlayers { get; private set; } = new();
-
-    // Fixed-size table for Inspector visualization
     [Header("Max 6 Players")]
     public GameObject[] connectedPlayerTable = new GameObject[6];
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
-        Instance = this;
-        DontDestroyOnLoad(gameObject);
+        if (Instance != null && Instance != this) Destroy(gameObject);
+        else Instance = this;
     }
 
     public override void OnNetworkSpawn()
     {
-        // Subscribe to connection events on all clients
         NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
         NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
 
-        // Add already connected players (host)
         foreach (var kvp in NetworkManager.Singleton.ConnectedClients)
         {
             var playerObj = kvp.Value.PlayerObject?.gameObject;
             if (playerObj != null && !ConnectedPlayers.ContainsKey(kvp.Key))
-            {
                 ConnectedPlayers[kvp.Key] = playerObj;
-            }
         }
 
         RefreshVisibleTable();
     }
 
-    private void OnClientConnected(ulong clientId)
-    {
-        StartCoroutine(AssignPlayerWhenReady(clientId));
-    }
+    private void OnClientConnected(ulong clientId) => StartCoroutine(AssignPlayerWhenReady(clientId));
 
     private IEnumerator AssignPlayerWhenReady(ulong clientId)
     {
@@ -60,7 +45,6 @@ public class NetworkPlayerManager : NetworkBehaviour
         {
             ConnectedPlayers[clientId] = playerObject.gameObject;
             RefreshVisibleTable();
-            Debug.Log($"✅ Player connected: {clientId} ({playerObject.name})");
         }
     }
 
@@ -70,19 +54,14 @@ public class NetworkPlayerManager : NetworkBehaviour
         {
             ConnectedPlayers.Remove(clientId);
             RefreshVisibleTable();
-            Debug.Log($"❌ Player disconnected: {clientId}");
         }
     }
 
     private void RefreshVisibleTable()
     {
-        // Clear table first
         for (int i = 0; i < connectedPlayerTable.Length; i++)
-        {
             connectedPlayerTable[i] = null;
-        }
 
-        // Fill table with up to 6 players
         int index = 0;
         foreach (var player in ConnectedPlayers.Values)
         {
@@ -90,15 +69,6 @@ public class NetworkPlayerManager : NetworkBehaviour
             connectedPlayerTable[index] = player;
             index++;
         }
-
-#if UNITY_EDITOR
-        // Force Unity to refresh Inspector view
-        UnityEditor.EditorApplication.delayCall += () =>
-        {
-            if (this != null)
-                UnityEditor.EditorUtility.SetDirty(this);
-        };
-#endif
     }
 
     private void OnDestroy()
@@ -110,8 +80,26 @@ public class NetworkPlayerManager : NetworkBehaviour
         }
     }
 
-    public GameObject GetPlayer(ulong clientId)
+    public void RestartScene()
     {
-        return ConnectedPlayers.ContainsKey(clientId) ? ConnectedPlayers[clientId] : null;
+        if (!NetworkManager.Singleton.IsServer) return;
+
+        // 🔹 Despawn wszystkich starych NetworkObjectów
+        foreach (var kvp in ConnectedPlayers)
+        {
+            var netObj = kvp.Value?.GetComponent<NetworkObject>();
+            if (netObj != null)
+                netObj.Despawn(true);
+        }
+
+        ConnectedPlayers.Clear();
+        RefreshVisibleTable();
+
+        // 🔹 Restart sceny dla wszystkich klientów
+        Scene currentScene = SceneManager.GetActiveScene();
+        NetworkManager.Singleton.SceneManager.LoadScene(
+            currentScene.name,
+            LoadSceneMode.Single
+        );
     }
 }

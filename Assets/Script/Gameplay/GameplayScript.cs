@@ -1,139 +1,132 @@
-using System;
-using System.Threading.Tasks.Sources;
-using Unity.Netcode;
-using Unity.Netcode.Components;
-using Unity.VisualScripting;
-using UnityEditor.ShortcutManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using Unity.Netcode;
+using System.Collections;
 
 public class GameplayScript : NetworkBehaviour
 {
-    
     public static GameplayScript instance;
-    
-    // Shared network variable for turn state
+
     public NetworkVariable<bool> isTeamOneTurn = new NetworkVariable<bool>(true);
-    
     public NetworkVariable<bool> isCanDown = new NetworkVariable<bool>(false);
-    
     public NetworkVariable<bool> isCanMinigameFinished = new NetworkVariable<bool>(false);
-    
+
     [SerializeField] private GameObject emptyCanPrefab;
-  
-    
+
     private void Awake()
     {
-        if(instance == null)
-            instance = this;
-        else 
-            Destroy(gameObject);
-        
-        isCanMinigameFinished.Value = false;
-        isTeamOneTurn.OnValueChanged += OnTurnChanged;
-    }
+        if (instance == null) instance = this;
+        else Destroy(gameObject);
 
-    /*private void OnDestroy()
-    {
-        isTeamOneTurn.OnValueChanged -= OnTurnChanged;
-    }*/
+        isTeamOneTurn.OnValueChanged += OnTurnChanged;
+        emptyCanPrefab = GameObject.Find("Beer");
+    }
 
     private void OnTurnChanged(bool previous, bool current)
     {
         Debug.Log($"🔄 Turn changed → {(current ? "Team One" : "Team Two")}");
-
         foreach (var player in NetworkPlayerManager.Instance.connectedPlayerTable)
         {
-            if(player ==null) continue; 
+            if (player == null) continue;
             player.GetComponent<PlayerScript>().SwapTurns();
         }
     }
-    
+
     public void EndPlayerTurn()
     {
-        // Ask the server to flip the turn
-        if (IsServer)
-        {
-            ToggleTurn();
-        }
-        else
-        {
-            RequestNextTurnServerRpc();
-        }
+        if (IsServer) ToggleTurn();
+        else RequestNextTurnServerRpc();
     }
 
     public void MinigameStateChangeRcp()
     {
-        if(IsServer)
-            isCanMinigameFinished.Value = true;
-        else
-            RequestMinigameFinishServerRpc();
+        if (IsServer) isCanMinigameFinished.Value = true;
+        else RequestMinigameFinishServerRpc();
     }
 
     public void CanDownStateChangeRcp()
     {
-        if(IsServer)
-            isCanDown.Value = true;
+        if (IsServer) isCanDown.Value = true;
+        else RequestCanDownStateChangeServerRpc();
     }
 
     public void CanPositionChangeRcp()
     {
-        if (IsServer)
-            CanPositionReset();
-        else
-            RequestCanPositionResetServerRpc();
-    }
-    
-    [ServerRpc(RequireOwnership = false)]
-    private void RequestNextTurnServerRpc(ServerRpcParams rpcParams = default)
-    {
-        ToggleTurn();
+        if (IsServer) CanPositionReset();
+        else RequestCanPositionResetServerRpc();
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void RequestMinigameFinishServerRpc(ServerRpcParams rpcParams = default)
-    {
-        isCanMinigameFinished.Value = true;
-    }
+    private void RequestNextTurnServerRpc(ServerRpcParams rpcParams = default) => ToggleTurn();
 
     [ServerRpc(RequireOwnership = false)]
-    private void RequestCanDownStateChangeServerRpc(ServerRpcParams rpcParams = default)
-    {
-        isCanDown.Value = true;
-    }
+    private void RequestMinigameFinishServerRpc(ServerRpcParams rpcParams = default) => isCanMinigameFinished.Value = true;
 
     [ServerRpc(RequireOwnership = false)]
-    private void RequestCanPositionResetServerRpc(ServerRpcParams rpcParams = default)
-    {
-        CanPositionReset();
-    }
-    
-    
+    private void RequestCanDownStateChangeServerRpc(ServerRpcParams rpcParams = default) => isCanDown.Value = true;
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestCanPositionResetServerRpc(ServerRpcParams rpcParams = default) => CanPositionReset();
+
     private void ToggleTurn()
     {
         isTeamOneTurn.Value = !isTeamOneTurn.Value;
         isCanMinigameFinished.Value = false;
         Debug.Log($"✅ Server switched turn → {(isTeamOneTurn.Value ? "Team One" : "Team Two")}");
-        Debug.Log("Seting up the can");
         CanUpBool();
         CanPositionReset();
     }
 
-    public bool GetTeamTurn()
-    {
-        return isTeamOneTurn.Value;
-    }
-    
-    public void CanUpBool()
-    {
-        isCanDown.Value = false;
-    }
+    public bool GetTeamTurn() => isTeamOneTurn.Value;
+
+    public void CanUpBool() => isCanDown.Value = false;
 
     public void CanPositionReset()
     {
-        emptyCanPrefab.transform.position = new Vector3(0,0.25f,0);
+        if (emptyCanPrefab == null) return;
+        emptyCanPrefab.transform.position = new Vector3(0, 0.25f, 0);
         emptyCanPrefab.transform.rotation = Quaternion.identity;
-        emptyCanPrefab.GetComponent<Rigidbody>().linearVelocity = Vector3.zero;
-        emptyCanPrefab.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+
+        Rigidbody rb = emptyCanPrefab.GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
     }
-    
+
+    private void OnEnable() => SceneManager.sceneLoaded += OnSceneLoaded;
+    private void OnDisable() => SceneManager.sceneLoaded -= OnSceneLoaded;
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (!IsServer) return;
+
+        ResetNetworkVariables();
+        StartCoroutine(ResetPlayersNextFrame());
+    }
+
+    private void ResetNetworkVariables()
+    {
+        isTeamOneTurn.Value = true;
+        isCanDown.Value = false;
+        isCanMinigameFinished.Value = false;
+        CanPositionReset();
+    }
+
+    private IEnumerator ResetPlayersNextFrame()
+    {
+        yield return null; // poczekaj jedną klatkę, gracze już spawn
+        ResetAllPlayers();
+    }
+
+    private void ResetAllPlayers()
+    {
+        foreach (var kvp in NetworkPlayerManager.Instance.ConnectedPlayers)
+        {
+            var player = kvp.Value?.GetComponent<PlayerScript>();
+            if (player != null)
+                player.ResetPlayerStateServerRpc();
+        }
+    }
 }
