@@ -41,7 +41,6 @@ public class MainMenu : MonoBehaviour
 
         NetworkManager.Singleton.StartHost();
         if (tempCamera != null) tempCamera.SetActive(false);
-        if (tempPanel != null) tempPanel.SetActive(false);
         Debug.Log("✅ Host wystartowany");
     }
 
@@ -64,10 +63,15 @@ public class MainMenu : MonoBehaviour
 
         NetworkManager.Singleton.StartClient();
         if (tempCamera != null) tempCamera.SetActive(false);
-        if (tempPanel != null) tempPanel.SetActive(false);
+        
         Debug.Log("✅ Client wystartowany");
     }
 
+    private void HideMenu()
+    {
+        tempPanel.SetActive(false);
+    }
+    
     public void LoadMenu() => SceneManager.LoadScene("Menu");
     public void Play() => SceneManager.LoadScene("Game");
 }

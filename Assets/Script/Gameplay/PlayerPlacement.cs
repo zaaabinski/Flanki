@@ -7,7 +7,7 @@ public class PlayerPlacement : NetworkBehaviour
     private bool teamsBalanced = false;
     [SerializeField] private GameObject teamOnePlacements;
     [SerializeField] private GameObject teamTwoPlacements;
-
+    [SerializeField] private GameObject localCanvas;
     private void Update()
     {
         if (teamsBalanced) return;
@@ -70,6 +70,7 @@ public class PlayerPlacement : NetworkBehaviour
             }
         }
         GameplayScript.instance.EndPlayerTurn();
+        localCanvas.SetActive(false);
         teamsBalanced = true;
     }
 }

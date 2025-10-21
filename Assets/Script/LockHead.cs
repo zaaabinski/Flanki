@@ -6,21 +6,33 @@ public class LockHead : MonoBehaviour
     public bool lockY = true;
     public bool lockZ = true;
 
-    private Quaternion initialRotation;
+    private Quaternion initialParentRotation;
 
     void Start()
     {
-        // Store the starting rotation
-        initialRotation = transform.rotation;
+        // Pobierz najwyższego rodzica
+        Transform root = transform;
+        while (root.parent != null)
+            root = root.parent;
+
+        // Zapisz początkową rotację rodzica
+        initialParentRotation = root.rotation;
     }
 
     void LateUpdate()
     {
-        Vector3 euler = transform.rotation.eulerAngles;
+        // Pobierz najwyższego rodzica
+        Transform root = transform;
+        while (root.parent != null)
+            root = root.parent;
 
-        if (lockX) euler.x = initialRotation.eulerAngles.x;
-        if (lockY) euler.y = initialRotation.eulerAngles.y;
-        if (lockZ) euler.z = initialRotation.eulerAngles.z;
+        // Aktualna rotacja obiektu
+        Vector3 euler = transform.rotation.eulerAngles;
+        Vector3 parentEuler = root.rotation.eulerAngles;
+
+        if (lockX) euler.x = parentEuler.x;
+        if (lockY) euler.y = parentEuler.y;
+        if (lockZ) euler.z = parentEuler.z;
 
         transform.rotation = Quaternion.Euler(euler);
     }

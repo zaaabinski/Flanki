@@ -1,9 +1,9 @@
 using Unity.Netcode;
 using UnityEngine;
+using System.Collections;
 
 public class RockScript : NetworkBehaviour
 {
-    // Let server know if the can was hit
     private NetworkVariable<bool> hitCan = new NetworkVariable<bool>(
         false,
         NetworkVariableReadPermission.Everyone,
@@ -14,7 +14,7 @@ public class RockScript : NetworkBehaviour
     {
         if (IsServer)
         {
-            Invoke(nameof(DestroyMe), 4f); // only server schedules the turn/end
+            Invoke(nameof(DestroyMe), 4f);
         }
     }
 
@@ -22,26 +22,36 @@ public class RockScript : NetworkBehaviour
     {
         if (!hitCan.Value)
         {
-            // Only server ends the turn and despawns
             GameplayScript.instance.EndPlayerTurn();
-            NetworkObject.Despawn(true);
         }
-        else
-        {
-            // Rock hit the can, just despawn
-            NetworkObject.Despawn(true);
-        }
+
+        NetworkObject.Despawn(true);
     }
 
     private void OnCollisionEnter(Collision other)
     {
-        if (!IsServer) return; // only server updates hitCan
+        if (!IsServer) return;
 
         if (other.gameObject.CompareTag("Can"))
         {
-            hitCan.Value = true; // server authoritative
-            Debug.Log("🍺 Beer hit! Turn will not end.");
-            NetworkObject.Despawn(true); // optional: destroy immediately
+            hitCan.Value = true;
+            Debug.Log("🍺 Beer hit! Checking if it falls...");
+
+            // Start coroutine to check if can actually fell after 1 second
+            StartCoroutine(CheckIfCanFell());
         }
+    }
+
+    private IEnumerator CheckIfCanFell()
+    {
+        yield return new WaitForSeconds(2f);
+
+        if (!GameplayScript.instance.isCanDown.Value)
+        {
+            Debug.Log("⚠️ Can was hit but didn't fall — ending turn.");
+            GameplayScript.instance.EndPlayerTurn();
+        }
+
+        NetworkObject.Despawn(true);
     }
 }
