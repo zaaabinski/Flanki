@@ -14,7 +14,7 @@ public class RockScript : NetworkBehaviour
     {
         if (IsServer)
         {
-            Invoke(nameof(DestroyMe), 4f);
+            Invoke(nameof(DestroyMe), 3f);
         }
     }
 

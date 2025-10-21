@@ -151,19 +151,24 @@ public class PlayerScript : NetworkBehaviour
         if (canRotationMinigameObject != null)
             canRotationMinigameObject.SetActive(canIsDown && myTurn);
 
-        if (canIsDown && !wasCanDown && iWasLastThrower)
+        // picie uruchamia się tylko jeśli ja byłem ostatnim rzucającym
+        if (canIsDown && myTurn && iWasLastThrower && !isDrinkingActive)
         {
             isDrinkingActive = true;
             PlayAnimationLocal("StartDrinking");
-            wasCanDown = true;
         }
-        else if (!canIsDown && wasCanDown && iWasLastThrower)
+
+        // kończymy picie, gdy can nie jest już na dole
+        if ((!canIsDown || !myTurn) && isDrinkingActive)
         {
             FinishDrinkingAnimation();
             wasCanDown = false;
             iWasLastThrower = false;
         }
+
+        wasCanDown = canIsDown;
     }
+
 
     private void MovePlayerToPosition(Vector3 pos)
     {
