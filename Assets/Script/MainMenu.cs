@@ -3,54 +3,62 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
-using UnityEngine.UI; // WAŻNE: Dodaj to do obsługi UI
+using UnityEngine.UI;
+using TMPro; // For TextMeshPro
 
 public class MainMenu : MonoBehaviour
 {
     [Header("UI References")]
-    // Przypisz w Inspektorze to pole tekstowe, gdzie klient wpisuje IP
     [SerializeField] private InputField ipInputField; 
-    
-    // ... (pozostałe Twoje pola)
+    [SerializeField] private TextMeshProUGUI hostIpText; // TMP text to show host IP
     [SerializeField] private string gameSceneName = "Game";
     [SerializeField] private GameObject tempCamera;
     [SerializeField] private GameObject tempPanel;
 
-// ----------------------------------------------------------------------------------------------------
+    private const string PlayerPrefKey_IP = "LastIP";
 
+    // ----------------------------------------------------------------------------------------------------
     // 🔹 HOST BUTTON
     public void OnHostButton()
     {
-        // Host użyje domyślnego adresu (np. 0.0.0.0), aby nasłuchiwać na wszystkich interfejsach
         StartCoroutine(StartHostNextFrame());
     }
 
     // 🔹 CLIENT BUTTON
     public void OnClientButton()
     {
-        // 1. Sprawdzamy i ustawiamy adres z pola tekstowego
         string ipAddress = ipInputField.text;
 
+        // Check if there is a saved IP in PlayerPrefs
         if (string.IsNullOrEmpty(ipAddress))
         {
-            Debug.LogError("‼️ Wprowadź adres IP hosta, aby się połączyć!");
-            return;
+            if (PlayerPrefs.HasKey(PlayerPrefKey_IP))
+            {
+                ipAddress = PlayerPrefs.GetString(PlayerPrefKey_IP);
+                Debug.Log($"♻️ Using saved IP: {ipAddress}");
+                ipInputField.text = ipAddress; // Show it in input field
+            }
+            else
+            {
+                Debug.LogError("‼️ Wprowadź adres IP hosta, aby się połączyć!");
+                return;
+            }
+        }
+        else
+        {
+            // Player typed a new IP → save it
+            PlayerPrefs.SetString(PlayerPrefKey_IP, ipAddress);
+            PlayerPrefs.Save();
+            Debug.Log($"💾 New IP saved: {ipAddress}");
         }
 
         SetConnectionAddress(ipAddress);
-        
-        // 2. Rozpoczynamy połączenie
         StartCoroutine(StartClientNextFrame());
     }
 
-// ----------------------------------------------------------------------------------------------------
-    
-    /// <summary>
-    /// Ustawia adres IP, z którym klient spróbuje się połączyć.
-    /// </summary>
+    // ----------------------------------------------------------------------------------------------------
     private void SetConnectionAddress(string ip)
     {
-        // Sprawdza, czy używamy Unity Transport (UTP)
         if (NetworkManager.Singleton.NetworkConfig.NetworkTransport is UnityTransport utp)
         {
             utp.ConnectionData.Address = ip;
@@ -58,34 +66,49 @@ public class MainMenu : MonoBehaviour
         }
         else
         {
-            // Opcjonalnie: obsługa błędu, jeśli używasz innego transportu
             Debug.LogError("Network Transport nie jest Unity Transport (UTP)! Nie można ustawić adresu.");
         }
     }
 
-// ----------------------------------------------------------------------------------------------------
-    
-    // ... (pozostałe funkcje StartHostNextFrame, StartClientNextFrame itd. pozostają bez zmian)
+    // ----------------------------------------------------------------------------------------------------
     private IEnumerator StartHostNextFrame()
     {
-        // ... (Twój obecny kod dla hosta)
-        yield return null; 
-        if (NetworkManager.Singleton == null) { /*...*/ yield break; }
-        if (NetworkManager.Singleton.IsListening) { /*...*/ yield return null; }
+        yield return null;
+        if (NetworkManager.Singleton == null) yield break;
+        if (NetworkManager.Singleton.IsListening) yield return null;
 
         NetworkManager.Singleton.StartHost();
+
+        // Show host IP in TMP
+        if (hostIpText != null)
+        {
+            string localIP = "127.0.0.1"; // Default fallback
+            try
+            {
+                var hostData = System.Net.Dns.GetHostEntry(System.Net.Dns.GetHostName());
+                foreach (var ip in hostData.AddressList)
+                {
+                    if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                    {
+                        localIP = ip.ToString();
+                        break;
+                    }
+                }
+            }
+            catch { }
+            hostIpText.text = $"Host IP: {localIP}";
+        }
+
         if (tempCamera != null) tempCamera.SetActive(false);
         Debug.Log("✅ Host wystartowany");
     }
 
     private IEnumerator StartClientNextFrame()
     {
-        // ... (Twój obecny kod dla klienta)
         yield return null;
-        if (NetworkManager.Singleton == null) { /*...*/ yield break; }
-        if (NetworkManager.Singleton.IsListening) { /*...*/ yield return null; }
+        if (NetworkManager.Singleton == null) yield break;
+        if (NetworkManager.Singleton.IsListening) yield return null;
 
-        // StartClient użyje adresu ustawionego wcześniej w SetConnectionAddress()
         NetworkManager.Singleton.StartClient();
         if (tempCamera != null) tempCamera.SetActive(false);
         
@@ -96,7 +119,7 @@ public class MainMenu : MonoBehaviour
     {
         tempPanel.SetActive(false);
     }
-    
+
     public void LoadMenu() => SceneManager.LoadScene("Menu");
     public void Play() => SceneManager.LoadScene("Game");
 }

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 using Unity.Netcode;
@@ -22,6 +23,9 @@ public class DrinkingMiniGame : NetworkBehaviour
 
     private PlayerScript player;
     private GameplayScript gameplay;
+
+    
+    
 
     void Start()
     {
@@ -57,8 +61,8 @@ public class DrinkingMiniGame : NetworkBehaviour
         // -----------------------------
         // 1️⃣ Sterowanie puszką (lokalne)
         // -----------------------------
-        if (Input.GetKeyDown(KeyCode.A)) targetTilt -= impulseAngle;
-        if (Input.GetKeyDown(KeyCode.D)) targetTilt += impulseAngle;
+        if (Input.GetKeyDown(KeyCode.RightArrow)) targetTilt -= impulseAngle;
+        if (Input.GetKeyDown(KeyCode.LeftArrow)) targetTilt += impulseAngle;
 
         // naturalny pull puszki
         targetTilt += pullDownSpeed * Time.deltaTime * Mathf.Sign(targetTilt);

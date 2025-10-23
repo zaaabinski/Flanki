@@ -84,7 +84,7 @@ public class GameplayScript : NetworkBehaviour
     public void CanPositionReset()
     {
         if (emptyCanPrefab == null) return;
-        emptyCanPrefab.transform.position = new Vector3(0, 0.25f, 0);
+        emptyCanPrefab.transform.position = new Vector3(0, 0.33f, 0);
         emptyCanPrefab.transform.rotation = Quaternion.identity;
 
         Rigidbody rb = emptyCanPrefab.GetComponent<Rigidbody>();

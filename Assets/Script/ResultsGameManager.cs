@@ -83,6 +83,6 @@ public class ResultsGameManager : NetworkBehaviour
         }
 
         if (resultsText != null)
-            resultsText.text = isWinner ? "Wygrałeś!" : "Przegrałeś!";
+            resultsText.text = isWinner ? "YOU WIN!" : "YOU LOSE!";
     }
 }
