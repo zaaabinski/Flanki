@@ -14,7 +14,7 @@ public class RockScript : NetworkBehaviour
     {
         if (IsServer)
         {
-            Invoke(nameof(DestroyMe), 3f);
+            Invoke(nameof(DestroyMe), 4f);
         }
     }
 
@@ -44,7 +44,9 @@ public class RockScript : NetworkBehaviour
 
     private IEnumerator CheckIfCanFell()
     {
-        yield return new WaitForSeconds(2f);
+        Debug.Log("Working");
+        yield return new WaitForSeconds(1.5f);
+        Debug.Log("Working");
 
         if (!GameplayScript.instance.isCanDown.Value)
         {
