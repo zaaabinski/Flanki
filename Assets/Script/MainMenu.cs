@@ -36,7 +36,7 @@ public class MainMenu : MonoBehaviour
             {
                 ipAddress = PlayerPrefs.GetString(PlayerPrefKey_IP);
                 Debug.Log($"♻️ Using saved IP: {ipAddress}");
-                ipInputField.text = ipAddress; // Show it in input field
+              //  ipInputField.text = ipAddress; // Show it in input field
             }
             else
             {
@@ -96,7 +96,9 @@ public class MainMenu : MonoBehaviour
                 }
             }
             catch { }
-            hostIpText.text = $"Host IP: {localIP}";
+           // hostIpText.text = $"Host IP: {localIP}";
+            hostIpText.text = $"Host is hosting";
+
         }
 
         if (tempCamera != null) tempCamera.SetActive(false);
